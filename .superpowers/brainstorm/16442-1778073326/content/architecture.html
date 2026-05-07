@@ -1,0 +1,108 @@
+<h2>技术架构</h2>
+<p class="subtitle">Android 原生 — Kotlin + Jetpack Compose</p>
+
+<div class="section">
+  <h3>整体分层架构</h3>
+  <div style="background:var(--bg-secondary);padding:16px;border-radius:8px;font-family:monospace;font-size:14px;line-height:2;">
+    <span style="color:var(--accent);">┌──────────────────────────────────┐</span><br>
+    <span style="color:var(--accent);">│</span>  <strong>UI 层</strong> — Jetpack Compose          <span style="color:var(--accent);">│</span><br>
+    <span style="color:var(--accent);">│</span>  日记列表 / 阅读器 / 碎片录入 / 仪表盘  <span style="color:var(--accent);">│</span><br>
+    <span style="color:var(--accent);">└──────────┬───────────────────────┘</span><br>
+    <span style="color:var(--accent);">           │</span><br>
+    <span style="color:var(--accent);">┌──────────▼───────────────────────┐</span><br>
+    <span style="color:var(--accent);">│</span>  <strong>ViewModel 层</strong>                    <span style="color:var(--accent);">│</span><br>
+    <span style="color:var(--accent);">│</span>  状态管理 / 业务逻辑编排              <span style="color:var(--accent);">│</span><br>
+    <span style="color:var(--accent);">└──────────┬───────────────────────┘</span><br>
+    <span style="color:var(--accent);">           │</span><br>
+    <span style="color:var(--accent);">┌──────────▼───────────────────────┐</span><br>
+    <span style="color:var(--accent);">│</span>  <strong>Domain 层</strong> — Use Cases              <span style="color:var(--accent);">│</span><br>
+    <span style="color:var(--accent);">│</span>  收集碎片 / 生成日记 / PERMA 评估      <span style="color:var(--accent);">│</span><br>
+    <span style="color:var(--accent);">└──────────┬───────────────────────┘</span><br>
+    <span style="color:var(--accent);">           │</span><br>
+    <span style="color:var(--accent);">┌──────────▼───────────────────────┐</span><br>
+    <span style="color:var(--accent);">│</span>  <strong>Data 层</strong>                           <span style="color:var(--accent);">│</span><br>
+    <span style="color:var(--accent);">│</span>  Room DB │ File System │ ContentProvider <span style="color:var(--accent);">│</span><br>
+    <span style="color:var(--accent);">└──────────────────────────────────┘</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>AI 管线设计（核心）</h3>
+  <div style="border:1px solid var(--border);border-radius:8px;padding:16px;">
+    <div style="background:var(--bg-secondary);padding:12px;border-radius:6px;font-family:monospace;font-size:13px;line-height:1.8;">
+      ┌─────────────────────┐<br>
+      │  AIProcessor 接口     │ ← 策略模式<br>
+      └──────────┬──────────┘<br>
+                 │<br>
+        ┌────────┼────────┐<br>
+        ▼        ▼        ▼<br>
+    ┌────────┐┌────────┐┌────────────┐<br>
+    │ ML Kit ││Gemini  ││ DeepSeek   │<br>
+    │ 管线   ││Nano管线││ API 管线   │<br>
+    └────────┘└────────┘└────────────┘
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+      <div><span style="font-weight:600;">处理器接口统一：</span><br>
+      <span style="font-size:13px;color:var(--text-secondary);">preprocess(fragments) → PERMA_score(text) → generate_diary(text) → generate_review(text)</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>核心数据模型</h3>
+  <div style="border:1px solid var(--border);border-radius:8px;padding:16px;font-family:monospace;font-size:13px;line-height:1.6;">
+    <span style="color:var(--accent);">// 碎片记录</span><br>
+    <strong>Fragment</strong> {<br>
+    <span style="color:var(--text-secondary);">  id, content, type (text/voice), source_app,</span><br>
+    <span style="color:var(--text-secondary);">  created_at, is_processed</span><br>
+    }<br><br>
+
+    <span style="color:var(--accent);">// 日记条目</span><br>
+    <strong>DiaryEntry</strong> {<br>
+    <span style="color:var(--text-secondary);">  id, date, title (&le;30字), content (markdown),</span><br>
+    <span style="color:var(--text-secondary);">  word_count, is_paginated, page_index,</span><br>
+    <span style="color:var(--text-secondary);">  local_path, obsidian_path, created_at</span><br>
+    }<br><br>
+
+    <span style="color:var(--accent);">// PERMA 评估</span><br>
+    <strong>PermaScore</strong> {<br>
+    <span style="color:var(--text-secondary);">  diary_id, positive_emotion, engagement,</span><br>
+    <span style="color:var(--text-secondary);">  relationships, meaning, accomplishment,</span><br>
+    <span style="color:var(--text-secondary);">  ai_review, suggestions</span><br>
+    }
+  </div>
+</div>
+
+<div class="section">
+  <h3>Android 技术选型</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:600;">UI</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">Jetpack Compose + Material 3</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:600;">数据库</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">Room</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:600;">架构</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">MVVM + Clean Architecture</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:600;">DI</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">Hilt</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:600;">端侧 AI</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">ML Kit + Gemini Nano SDK</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:600;">网络</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">Retrofit（仅 DeepSeek API 使用）</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 8px;font-weight:600;">后台任务</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">WorkManager（定时生成日记）</td>
+    </tr>
+  </table>
+</div>

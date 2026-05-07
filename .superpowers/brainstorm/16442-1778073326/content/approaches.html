@@ -1,0 +1,83 @@
+<h2>选择技术方案</h2>
+<p class="subtitle">核心差异在于端侧 AI 的实现方式。点击查看详细对比。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>传统方案：ML Kit + 规则引擎</h3>
+      <p>Google ML Kit（文本分类/情感分析）+ 自定义 PERMA 评分规则</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros">
+          <h4>优势</h4>
+          <ul>
+            <li>成熟稳定，文档丰富</li>
+            <li>覆盖几乎所有 Android 设备</li>
+            <li>APK 体积影响小</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>劣势</h4>
+          <ul>
+            <li>NLP 理解能力有限</li>
+            <li>复杂语义（语气、隐喻）难以处理</li>
+            <li>PERMA 评价会比较生硬</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>前沿方案：Gemini Nano 端侧 LLM</h3>
+      <p>利用 Google Gemini Nano（Android 内置）/ MediaPipe + Llama.cpp 部署小模型</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros">
+          <h4>优势</h4>
+          <ul>
+            <li>最强理解能力，PERMA 评价自然准确</li>
+            <li>能处理复杂叙事和隐含情绪</li>
+            <li>生成日记文本质量最高</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>劣势</h4>
+          <ul>
+            <li>需要较新设备（Pixel 8+/三星 S24+）</li>
+            <li>覆盖用户群有限</li>
+            <li>模型下载包较大</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)" style="border-color: var(--accent);">
+    <div class="letter" style="background: var(--accent); color: var(--bg);">C ★</div>
+    <div class="content">
+      <h3>推荐：混合架构（渐进增强）</h3>
+      <p>基础设备 → ML Kit + 规则引擎 | 高端设备 → Gemini Nano 全功能</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros">
+          <h4>优势</h4>
+          <ul>
+            <li>覆盖从低端到高端全部设备</li>
+            <li>高端设备体验最佳，低端设备也能用</li>
+            <li>未来随着设备升级，体验自动提升</li>
+            <li>单一代码库，不同后端</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>劣势</h4>
+          <ul>
+            <li>需要维护两套处理管线</li>
+            <li>不同设备体验有差异</li>
+            <li>初期开发工作量略大</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,101 @@
+<h2>功能模块架构</h2>
+<p class="subtitle">APP 内部模块划分</p>
+
+<div style="display:flex;flex-direction:column;gap:16px;margin:16px 0;">
+
+  <div style="border:1px solid var(--border);border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:18px;color:var(--accent);margin-bottom:8px;">📥 碎片收集模块</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">快速输入</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">语音转文字</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">Android 分享扩展</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">桌面小部件</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid var(--border);border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:18px;color:var(--accent);margin-bottom:8px;">🧠 AI 处理引擎</div>
+    <div style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">用户可选的 3 级处理后端：</div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;background:var(--bg-secondary);font-weight:600;">等级</td>
+        <td style="padding:8px;background:var(--bg-secondary);font-weight:600;">方案</td>
+        <td style="padding:8px;background:var(--bg-secondary);font-weight:600;">适用场景</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;text-align:center;">🟢 基础</td>
+        <td style="padding:8px;">ML Kit + 规则引擎</td>
+        <td style="padding:8px;color:var(--text-secondary);">离线低端设备</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;text-align:center;">🔵 进阶</td>
+        <td style="padding:8px;">Gemini Nano（端侧 LLM）</td>
+        <td style="padding:8px;color:var(--text-secondary);">离线高端设备</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;text-align:center;">🟣 旗舰</td>
+        <td style="padding:8px;"><strong>外部 API（DeepSeek 等）</strong></td>
+        <td style="padding:8px;color:var(--text-secondary);">联网时追求最佳日记质量</td>
+      </tr>
+    </table>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">预处理管线</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">PERMA 评分</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">日记文本生成</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">AI 评价建议</span>
+    </div>
+    <div style="font-size:13px;color:var(--text-secondary);margin-top:8px;">用户可在设置中选择默认处理后端，API Key 自备</div>
+  </div>
+
+  <div style="border:1px solid var(--border);border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:18px;color:var(--accent);margin-bottom:8px;">📖 日记管理模块</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">内置 Markdown 阅读器</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">日记列表/日历视图</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">PERMA 趋势图表</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">搜索/筛选</span>
+    </div>
+    <div style="font-size:14px;color:var(--text-secondary);margin-top:8px;">不依赖 Obsidian，APP 内即可完整阅读和管理</div>
+  </div>
+
+  <div style="border:1px solid var(--border);border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:18px;color:var(--accent);margin-bottom:8px;">🔗 导出集成模块</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">Obsidian 同步</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">本地 .md 缓存</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">分享为图片/文本</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid var(--border);border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:18px;color:var(--accent);margin-bottom:8px;">⚙️ 设置模块</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">AI 后端选择 & API Key</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">Obsidian Vault 路径</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">日记生成时间 & 字数上限</span>
+      <span style="background:var(--bg-secondary);padding:4px 10px;border-radius:12px;font-size:13px;">存储位置管理</span>
+    </div>
+  </div>
+
+</div>
+
+<div style="background:var(--bg-secondary);padding:12px;border-radius:8px;margin-top:12px;">
+  <h4 style="margin:0 0 8px 0;">三层次存储</h4>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:600;">APP 本地数据库</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">存储碎片原文 + AI 处理结果结构数据</td>
+      <td style="padding:6px 8px;"><span style="font-size:12px;background:var(--accent);color:var(--bg);padding:2px 8px;border-radius:8px;">始终</span></td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:600;">本地 .md 文件缓存</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">APP 沙盒内保存完整日记文件</td>
+      <td style="padding:6px 8px;"><span style="font-size:12px;background:var(--bg-secondary);padding:2px 8px;border-radius:8px;">始终</span></td>
+    </tr>
+    <tr>
+      <td style="padding:6px 8px;font-weight:600;">Obsidian Vault（可选）</td>
+      <td style="padding:6px 8px;color:var(--text-secondary);">用户配置 Vault 路径后同步写入</td>
+      <td style="padding:6px 8px;"><span style="font-size:12px;background:var(--bg-secondary);padding:2px 8px;border-radius:8px;">可选</span></td>
+    </tr>
+  </table>
+</div>

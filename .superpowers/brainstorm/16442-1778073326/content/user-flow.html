@@ -1,0 +1,77 @@
+<h2>核心用户流程（修正版）</h2>
+<p class="subtitle">从碎片收集到 Markdown 日记产出</p>
+
+<div class="section">
+  <h3>第一阶段：碎片收集</h3>
+  <div style="display:flex;flex-direction:column;gap:12px;margin:16px 0;">
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;">
+      <div style="font-weight:600;color:var(--accent);">① APP 内快速记录</div>
+      <div style="color:var(--text-secondary);font-size:14px;">打开 APP → 点击"+" → 输入文字 / 语音 → 保存碎片</div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;">
+      <div style="font-weight:600;color:var(--accent);">② 系统分享扩展</div>
+      <div style="color:var(--text-secondary);font-size:14px;">在任意 APP 中分享 → 选择「日记助手」→ 自动存入碎片箱</div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;">
+      <div style="font-weight:600;color:var(--accent);">③ 语音速记</div>
+      <div style="color:var(--text-secondary);font-size:14px;">桌面小部件一键录音 → 语音转文字 → 存入碎片箱</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>第二阶段：AI 处理管线</h3>
+  <div style="display:flex;flex-direction:column;gap:8px;margin:16px 0;">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span style="background:var(--accent);color:var(--bg);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">1</span>
+      <span>预处理 — 去语气词、纠错、分段</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span style="background:var(--accent);color:var(--bg);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">2</span>
+      <span>碎片归类合并 — 按主题/时间聚类</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span style="background:var(--accent);color:var(--bg);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">3</span>
+      <span>PERMA 五维评估打分</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span style="background:var(--accent);color:var(--bg);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">4</span>
+      <span>日记正文生成 — 连贯叙事，控制字数</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span style="background:var(--accent);color:var(--bg);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">5</span>
+      <span>AI 评价与明日建议</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>第三阶段：日记产出</h3>
+  <div style="display:flex;flex-direction:column;gap:16px;margin:16px 0;">
+    <div style="border:1px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-weight:600;color:var(--accent);margin-bottom:8px;">📄 文件格式：Markdown</div>
+      <div style="background:var(--bg-secondary);padding:12px;border-radius:6px;font-family:monospace;font-size:14px;">
+        <span style="color:var(--accent);">2026-05-06-今日项目启动与日常记录.md</span><br>
+        <span style="color:var(--text-secondary);"># 2026-05-06 今日项目启动与日常记录</span><br>
+        <br>
+        <span style="color:var(--text-secondary);">## 日记正文</span><br>
+        ...（控制在 1000 字以内）<br>
+        <br>
+        <span style="color:var(--text-secondary);">## PERMA 评估</span><br>
+        ...<br>
+        <br>
+        <span style="color:var(--text-secondary);">## AI 评价与建议</span><br>
+        ...
+      </div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;gap:16px;flex-wrap:wrap;">
+      <div><span style="font-weight:600;">📝 标题格式：</span>日期 + 当日重点内容</div>
+      <div><span style="font-weight:600;">📏 字数上限：</span>可配置（默认 1000 字）</div>
+      <div><span style="font-weight:600;">📍 存储位置：</span>本地文件系统，可指定目录</div>
+    </div>
+  </div>
+</div>
+
+<div style="background:var(--accent);color:var(--bg);border-radius:8px;padding:12px;text-align:center;font-weight:600;font-size:18px;margin-top:16px;">
+  ⏱ 每晚 9:00 自动生成 | 随时手动触发 | 存为 .md 文件
+</div>

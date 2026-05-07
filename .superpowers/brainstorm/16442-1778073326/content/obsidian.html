@@ -1,0 +1,67 @@
+<h2>Obsidian 集成方案</h2>
+<p class="subtitle">日记文件直接写入 Obsidian Vault</p>
+
+<div class="section">
+  <h3>文件结构</h3>
+  <div style="background:var(--bg-secondary);padding:16px;border-radius:8px;font-family:monospace;font-size:14px;line-height:1.8;margin:12px 0;">
+    📁 <span style="font-weight:600;">日记本目录（即 Obsidian Vault）</span><br>
+    ┣ 📁 2026<br>
+    ┃ ┣ 📁 05<br>
+    ┃ ┃ ┣ 📄 <span style="color:var(--accent);">2026-05-06-今日项目启动.md</span><br>
+    ┃ ┃ ┣ 📄 <span style="color:var(--accent);">2026-05-07-平淡但充实的一天.md</span><br>
+    ┃ ┃ ┗ ...
+    ┃ ┗ ...
+    ┗ ...
+  </div>
+  <div style="border:1px solid var(--border);border-radius:8px;padding:12px;">
+    <div style="font-weight:600;margin-bottom:8px;">标题规则</div>
+    <ul>
+      <li>格式：<code>YYYY-MM-DD-重点摘要.md</code></li>
+      <li>标题 ≤ 30 字（含日期部分）</li>
+      <li>AI 从当日内容提取摘要作为标题后半段</li>
+      <li>超过 5000 字 → <code>xxx-1.md</code>、<code>xxx-2.md</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="section">
+  <h3>日记文件模板 (Obsidian 原生)</h3>
+  <div style="background:var(--bg-secondary);padding:16px;border-radius:8px;font-family:monospace;font-size:14px;line-height:1.6;margin:12px 0;">
+    ---<br>
+    date: 2026-05-06<br>
+    tags: [diary, perma]<br>
+    mood_score: 7.5<br>
+    ---<br>
+    <br>
+    # 2026-05-06 今日项目启动<br>
+    <br>
+    ## 日记正文<br>
+    ...<br>
+    <br>
+    ## PERMA 评估<br>
+    | 维度 | 评分 | 说明 |<br>
+    |------|:----:|------|<br>
+    | 积极情绪 | 8/10 | ... |<br>
+    | 投入 | 6/10 | ... |<br>
+    | 关系 | 7/10 | ... |<br>
+    | 意义 | 9/10 | ... |<br>
+    | 成就 | 5/10 | ... |<br>
+    <br>
+    ## AI 评价<br>
+    ...<br>
+    <br>
+    ## 明日建议<br>
+    ...
+  </div>
+  <p style="font-size:14px;color:var(--text-secondary);">✅ 完整兼容 Obsidian：YAML frontmatter、标签、表格、双向链接均可正常使用</p>
+</div>
+
+<div class="section">
+  <h3>使用场景</h3>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div>🔹 用户可在 Obsidian 中浏览/搜索/链接所有日记</div>
+    <div>🔹 日记自动归入年/月文件夹，结构清晰</div>
+    <div>🔹 支持 Obsidian Graph View 展示日记之间的关联</div>
+    <div>🔹 APP 可读取已有日记，避免重复生成</div>
+  </div>
+</div>

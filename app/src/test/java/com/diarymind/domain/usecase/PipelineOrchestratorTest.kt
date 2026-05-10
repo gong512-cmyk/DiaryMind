@@ -1,6 +1,7 @@
 package com.diarymind.domain.usecase
 
 import com.diarymind.data.repository.DiaryRepository
+import com.diarymind.domain.model.DiaryEntry
 import com.diarymind.domain.model.Fragment
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -86,6 +87,91 @@ class PipelineOrchestratorTest {
     }
 
     @Test
+    fun `executePipeline keeps existing diary when overwrite AI assessment fails`() = runTest {
+        val fragments = listOf(Fragment(id = 1, content = "test"))
+        val processed = listOf(ProcessedFragment(1, "test", emptyList(), "neutral"))
+        val errorMessage = "PERMA failed"
+
+        coEvery { aiProcessor.preprocess(fragments) } returns processed
+        coEvery { aiProcessor.generateDiary(processed) } returns "generated diary"
+        coEvery { aiProcessor.assessPERMA("generated diary") } throws RuntimeException(errorMessage)
+
+        val states = orchestrator.executePipeline(fragments, forceOverwrite = true).toList()
+
+        assertTrue(states.last() is PipelineOrchestrator.PipelineState.Error)
+        val error = states.last() as PipelineOrchestrator.PipelineState.Error
+        assertEquals(errorMessage, error.message)
+        coVerify(exactly = 0) { repository.getDiaryByDate(any()) }
+        coVerify(exactly = 0) { repository.deleteDiaryWithDependencies(any()) }
+        coVerify(exactly = 0) { repository.addDiary(any()) }
+    }
+
+    @Test
+    fun `executePipeline rolls back created diary when later write fails`() = runTest {
+        val fragments = listOf(Fragment(id = 1, content = "test"))
+        val processed = listOf(ProcessedFragment(1, "test", emptyList(), "neutral"))
+        val permaResult = PermaScoreResult(
+            positiveEmotion = 8f,
+            engagement = 7f,
+            relationships = 6f,
+            meaning = 9f,
+            accomplishment = 5f,
+            aiReview = "很好",
+            suggestions = "继续保持"
+        )
+
+        coEvery { aiProcessor.preprocess(fragments) } returns processed
+        coEvery { aiProcessor.generateDiary(processed) } returns "generated diary"
+        coEvery { aiProcessor.assessPERMA("generated diary") } returns permaResult
+        coEvery { repository.getDiaryByDate(any()) } returns DiaryEntry(
+            id = 10,
+            date = "2026-05-07",
+            title = "old",
+            content = "old"
+        )
+        coEvery { repository.addDiary(any()) } returns 100L
+        coEvery { repository.addPermaScore(any()) } throws RuntimeException("DB write failed")
+
+        val states = orchestrator.executePipeline(fragments, forceOverwrite = true).toList()
+
+        assertTrue(states.last() is PipelineOrchestrator.PipelineState.Error)
+        coVerify { repository.deleteDiaryWithDependencies(10L) }
+        coVerify { repository.deleteDiaryWithDependencies(100L) }
+        coVerify { repository.updateFragmentStep(1, com.diarymind.domain.model.PipelineStep.FAILED) }
+    }
+
+    @Test
+    fun `executePipeline keeps existing diary when replacement insert fails`() = runTest {
+        val fragments = listOf(Fragment(id = 1, content = "test"))
+        val processed = listOf(ProcessedFragment(1, "test", emptyList(), "neutral"))
+        val permaResult = PermaScoreResult(
+            positiveEmotion = 8f,
+            engagement = 7f,
+            relationships = 6f,
+            meaning = 9f,
+            accomplishment = 5f,
+            aiReview = "很好",
+            suggestions = "继续保持"
+        )
+
+        coEvery { aiProcessor.preprocess(fragments) } returns processed
+        coEvery { aiProcessor.generateDiary(processed) } returns "generated diary"
+        coEvery { aiProcessor.assessPERMA("generated diary") } returns permaResult
+        coEvery { repository.getDiaryByDate(any()) } returns DiaryEntry(
+            id = 10,
+            date = "2026-05-07",
+            title = "old",
+            content = "old"
+        )
+        coEvery { repository.addDiary(any()) } throws RuntimeException("insert failed")
+
+        val states = orchestrator.executePipeline(fragments, forceOverwrite = true).toList()
+
+        assertTrue(states.last() is PipelineOrchestrator.PipelineState.Error)
+        coVerify(exactly = 0) { repository.deleteDiaryWithDependencies(10L) }
+    }
+
+    @Test
     fun `extractTitle truncates long first line`() {
         val content = "这是一段非常长的开头文字，超过了二十个字符的限制"
         val date = "2026-05-07"
@@ -101,5 +187,25 @@ class PipelineOrchestratorTest {
     fun `extractTitle uses default when content is empty`() {
         val title = orchestrator.extractTitle("", "2026-05-07")
         assertEquals("2026-05-07 今日记录", title)
+    }
+
+    @Test
+    fun `extractTitle strips markdown heading markers`() {
+        val content = "# 日记：2025年5月6日\n今天发生了一些事情。"
+        val date = "2026-05-07"
+
+        val title = orchestrator.extractTitle(content, date)
+
+        assertEquals("2026-05-07 日记：2025年5月6日", title)
+    }
+
+    @Test
+    fun `extractTitle strips multiple heading levels`() {
+        val content = "### 小结\n内容在这里"
+        val date = "2026-05-07"
+
+        val title = orchestrator.extractTitle(content, date)
+
+        assertEquals("2026-05-07 小结", title)
     }
 }

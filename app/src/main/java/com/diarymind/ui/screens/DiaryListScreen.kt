@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.diarymind.domain.model.displayTitle
 import com.diarymind.ui.components.EmptyState
 import com.diarymind.ui.viewmodel.DiaryViewModel
 
@@ -84,7 +85,7 @@ fun DiaryListScreen(
                             modifier = Modifier.padding(16.dp)
                         ) {
                             Text(
-                                text = diary.title,
+                                text = diary.displayTitle(),
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(modifier = Modifier.height(4.dp))

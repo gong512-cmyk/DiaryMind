@@ -51,6 +51,7 @@ import androidx.navigation.NavController
 import com.diarymind.domain.model.DiaryEntry
 import com.diarymind.domain.model.Fragment
 import com.diarymind.domain.model.PermaScore
+import com.diarymind.domain.model.displayTitle
 import com.diarymind.ui.components.EmptyState
 import com.diarymind.ui.viewmodel.DiaryViewModel
 
@@ -149,7 +150,7 @@ fun DiaryDetailScreen(
 
             // Title and date
             Text(
-                text = diary.title,
+                text = diary.displayTitle(),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )

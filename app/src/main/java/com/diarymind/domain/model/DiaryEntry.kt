@@ -16,3 +16,10 @@ data class DiaryEntry(
     val localPath: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
+
+fun DiaryEntry.displayTitle(): String {
+    return title
+        .replace(Regex("^\\d{4}-\\d{2}-\\d{2}\\s*"), "")
+        .replace(Regex("^#{1,6}\\s*"), "")
+        .trim()
+}

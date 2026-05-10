@@ -1,11 +1,15 @@
 package com.diarymind.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,7 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.diarymind.domain.model.DiaryEntry
+import com.diarymind.domain.model.displayTitle
 import com.diarymind.ui.viewmodel.DiaryViewModel
 import com.diarymind.util.getLlmConfig
 import com.diarymind.util.hasPrivacyConsent
@@ -160,38 +167,56 @@ fun HomeScreen(
                         onClick = { navController.navigate("diaryDetail/${todayDiary.id}") }
                     )
                 }
-            } else {
                 item {
-                    TodayFragmentsSection(
-                        uiState = uiState,
-                        onGenerateClick = {
-                            when {
-                                !hasPrivacyConsent(context) -> showPrivacyDialog = true
-                                getLlmConfig(context).apiKey.isBlank() -> viewModel.showError("请先在设置中配置 API Key")
-                                !isNetworkAvailable(context) -> viewModel.showError("当前无网络连接，请检查网络后重试")
-                                else -> viewModel.generateDiary()
-                            }
-                        },
-                        onFragmentClick = { fragmentId ->
-                            navController.navigate("capture/$fragmentId")
-                        }
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
+            }
+
+            item {
+                TodayFragmentsSection(
+                    uiState = uiState,
+                    onGenerateClick = {
+                        when {
+                            !hasPrivacyConsent(context) -> showPrivacyDialog = true
+                            getLlmConfig(context).apiKey.isBlank() -> viewModel.showError("请先在设置中配置 API Key")
+                            !isNetworkAvailable(context) -> viewModel.showError("当前无网络连接，请检查网络后重试")
+                            else -> viewModel.generateDiary()
+                        }
+                    },
+                    onFragmentClick = { fragmentId ->
+                        navController.navigate("capture/$fragmentId")
+                    }
+                )
             }
 
             val historyDiaries = uiState.diaries.filter { it.date != todayStr }
             if (historyDiaries.isNotEmpty()) {
                 item {
-                    Text(
-                        text = "历史日记",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 32.dp, bottom = 12.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 32.dp, bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "最近动态",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "时间轴 →",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
-                items(historyDiaries) { diary ->
-                    HistoryDiaryItem(
+                itemsIndexed(historyDiaries) { index, diary ->
+                    TimelineDiaryItem(
                         diary = diary,
+                        isFirst = index == 0,
+                        isLast = index == historyDiaries.lastIndex,
                         onClick = { navController.navigate("diaryDetail/${diary.id}") }
                     )
                 }
@@ -230,7 +255,7 @@ private fun TodayDiaryCard(diary: DiaryEntry, onClick: () -> Unit) {
             modifier = Modifier.padding(20.dp)
         ) {
             Text(
-                text = diary.title,
+                text = diary.displayTitle(),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 maxLines = 1,
@@ -238,7 +263,7 @@ private fun TodayDiaryCard(diary: DiaryEntry, onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = diary.content.lineSequence().firstOrNull()?.trim() ?: "",
+                text = firstLinePreview(diary.content),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                 maxLines = 3,
@@ -341,44 +366,77 @@ private fun TodayFragmentsSection(
 }
 
 @Composable
-private fun HistoryDiaryItem(diary: DiaryEntry, onClick: () -> Unit) {
-    Card(
+private fun TimelineDiaryItem(
+    diary: DiaryEntry,
+    isFirst: Boolean,
+    isLast: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            .height(IntrinsicSize.Min)
+            .clickable(onClick = onClick)
     ) {
+        // Timeline axis — seamless single line drawn via Canvas
+        val lineColor = MaterialTheme.colorScheme.outline
+        val dotColor = MaterialTheme.colorScheme.primary
+        Box(
+            modifier = Modifier
+                .width(32.dp)
+                .fillMaxHeight()
+                .drawBehind {
+                    val centerX = size.width / 2
+                    val centerY = size.height / 2
+                    val dotRadius = 5.dp.toPx()
+                    val strokeWidth = 2.dp.toPx()
+
+                    if (!isFirst) {
+                        drawLine(
+                            color = lineColor,
+                            start = androidx.compose.ui.geometry.Offset(centerX, 0f),
+                            end = androidx.compose.ui.geometry.Offset(centerX, centerY - dotRadius),
+                            strokeWidth = strokeWidth
+                        )
+                    }
+                    if (!isLast) {
+                        drawLine(
+                            color = lineColor,
+                            start = androidx.compose.ui.geometry.Offset(centerX, centerY + dotRadius),
+                            end = androidx.compose.ui.geometry.Offset(centerX, size.height),
+                            strokeWidth = strokeWidth
+                        )
+                    }
+                    drawCircle(
+                        color = dotColor,
+                        radius = dotRadius,
+                        center = androidx.compose.ui.geometry.Offset(centerX, centerY)
+                    )
+                }
+        )
+
+        // Content
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .padding(start = 8.dp, bottom = if (isLast) 0.dp else 16.dp)
+                .weight(1f)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = diary.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "${diary.wordCount} 字",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = diary.content.lineSequence().firstOrNull()?.trim() ?: "",
+                text = diary.date,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = diary.displayTitle(),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = firstLinePreview(diary.content),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
@@ -430,6 +488,10 @@ private fun ErrorCard(message: String, onDismiss: () -> Unit) {
             }
         }
     }
+}
+
+private fun firstLinePreview(content: String): String {
+    return content.lineSequence().firstOrNull()?.trim()?.replace(Regex("^#{1,6}\\s*"), "") ?: ""
 }
 
 private fun isNetworkAvailable(context: android.content.Context): Boolean {

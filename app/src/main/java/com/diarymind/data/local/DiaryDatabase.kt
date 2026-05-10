@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.diarymind.domain.model.DiaryEntry
 import com.diarymind.domain.model.Fragment
 import com.diarymind.domain.model.FragmentDiaryCrossRef
@@ -11,8 +13,8 @@ import com.diarymind.domain.model.PermaScore
 
 @Database(
     entities = [Fragment::class, DiaryEntry::class, PermaScore::class, FragmentDiaryCrossRef::class],
-    version = 1,
-    exportSchema = false
+    version = 2,
+    exportSchema = true
 )
 abstract class DiaryDatabase : RoomDatabase() {
     abstract fun fragmentDao(): FragmentDao
@@ -24,13 +26,44 @@ abstract class DiaryDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: DiaryDatabase? = null
 
+        internal val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS fragment_diary_cross_ref_new (
+                        fragmentId INTEGER NOT NULL,
+                        diaryId INTEGER NOT NULL,
+                        PRIMARY KEY(fragmentId, diaryId),
+                        FOREIGN KEY(fragmentId) REFERENCES fragments(id) ON DELETE CASCADE,
+                        FOREIGN KEY(diaryId) REFERENCES diary_entries(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO fragment_diary_cross_ref_new(fragmentId, diaryId)
+                    SELECT c.fragmentId, c.diaryId
+                    FROM fragment_diary_cross_ref c
+                    INNER JOIN fragments f ON f.id = c.fragmentId
+                    INNER JOIN diary_entries d ON d.id = c.diaryId
+                    """.trimIndent()
+                )
+                db.execSQL("DROP TABLE fragment_diary_cross_ref")
+                db.execSQL("ALTER TABLE fragment_diary_cross_ref_new RENAME TO fragment_diary_cross_ref")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_fragment_diary_cross_ref_diaryId ON fragment_diary_cross_ref(diaryId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_fragment_diary_cross_ref_fragmentId ON fragment_diary_cross_ref(fragmentId)")
+            }
+        }
+
         fun getDatabase(context: Context): DiaryDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     DiaryDatabase::class.java,
                     "diary_database"
-                ).build()
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .build()
                 INSTANCE = instance
                 instance
             }

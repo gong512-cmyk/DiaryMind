@@ -3,13 +3,10 @@ package com.diarymind.domain.usecase
 import com.diarymind.data.repository.DiaryRepository
 import com.diarymind.domain.model.DiaryEntry
 import com.diarymind.domain.model.Fragment
-import com.diarymind.domain.model.FragmentDiaryCrossRef
 import com.diarymind.domain.model.PermaScore
 import com.diarymind.domain.model.PipelineStep
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -26,6 +23,7 @@ class PipelineOrchestrator @Inject constructor(
 
     suspend fun executePipeline(fragments: List<Fragment>, forceOverwrite: Boolean = false): Flow<PipelineState> = flow {
         emit(PipelineState.Running("开始处理..."))
+        var createdDiaryId: Long? = null
 
         try {
             val diaryDate = fragments.minOfOrNull { it.createdAt }
@@ -36,14 +34,6 @@ class PipelineOrchestrator @Inject constructor(
                 }
                 ?: LocalDate.now()
             val dateStr = diaryDate.format(DateTimeFormatter.ISO_DATE)
-
-            // Delete existing diary if overwriting
-            if (forceOverwrite) {
-                val existingDiary = repository.getDiaryByDate(dateStr)
-                existingDiary?.let {
-                    repository.deleteDiaryWithDependencies(it.id)
-                }
-            }
 
             // Step 1: Preprocess
             emit(PipelineState.Running("整理碎片..."))
@@ -67,7 +57,20 @@ class PipelineOrchestrator @Inject constructor(
                 isPaginated = wordCount > 5000,
                 totalPages = if (wordCount > 5000) (wordCount / 5000) + 1 else 1
             )
+
+            // Step 3: Assess PERMA
+            emit(PipelineState.Running("分析心理状态..."))
+            val permaResult = aiProcessor.assessPERMA(diaryContent)
+
+            val existingDiaryId = if (forceOverwrite) {
+                repository.getDiaryByDate(dateStr)?.id
+            } else {
+                null
+            }
+
             val diaryId = repository.addDiary(diary)
+            createdDiaryId = diaryId
+            existingDiaryId?.let { repository.deleteDiaryWithDependencies(it) }
 
             // Link fragments to diary
             fragments.forEach { fragment ->
@@ -75,9 +78,6 @@ class PipelineOrchestrator @Inject constructor(
                 repository.updateFragmentStep(fragment.id, PipelineStep.GENERATED)
             }
 
-            // Step 3: Assess PERMA
-            emit(PipelineState.Running("分析心理状态..."))
-            val permaResult = aiProcessor.assessPERMA(diaryContent)
             val permaScore = PermaScore(
                 diaryId = diaryId,
                 positiveEmotion = permaResult.positiveEmotion,
@@ -104,6 +104,9 @@ class PipelineOrchestrator @Inject constructor(
             emit(PipelineState.Success(diaryId))
 
         } catch (e: Exception) {
+            createdDiaryId?.let { diaryId ->
+                runCatching { repository.deleteDiaryWithDependencies(diaryId) }
+            }
             fragments.forEach { fragment ->
                 repository.updateFragmentStep(fragment.id, PipelineStep.FAILED)
             }
@@ -113,10 +116,11 @@ class PipelineOrchestrator @Inject constructor(
 
     internal fun extractTitle(content: String, date: String): String {
         val firstLine = content.lineSequence().firstOrNull()?.trim() ?: ""
-        val summary = if (firstLine.length > 20) {
-            firstLine.take(20) + "..."
+        val cleanLine = firstLine.replace(Regex("^#{1,6}\\s*"), "").trim()
+        val summary = if (cleanLine.length > 20) {
+            cleanLine.take(20) + "..."
         } else {
-            firstLine.ifEmpty { "今日记录" }
+            cleanLine.ifEmpty { "今日记录" }
         }
         return "$date $summary"
     }

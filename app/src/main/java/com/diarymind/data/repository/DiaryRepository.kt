@@ -10,6 +10,9 @@ import com.diarymind.domain.model.FragmentDiaryCrossRef
 import com.diarymind.domain.model.PermaScore
 import com.diarymind.domain.model.PipelineStep
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,7 +39,26 @@ class DiaryRepository @Inject constructor(
     }
 
     suspend fun getFragmentsByDate(date: String): List<Fragment> {
-        return fragmentDao.getFragmentsByDate(date)
+        val formatter = DateTimeFormatter.ISO_DATE
+        val localDate = LocalDate.parse(date, formatter)
+        val zoneId = ZoneId.systemDefault()
+        val startOfDay = localDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val endOfDay = localDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        return fragmentDao.getFragmentsByDateRange(startOfDay, endOfDay)
+    }
+
+    suspend fun getFragmentById(id: Long): Fragment? {
+        return fragmentDao.getFragmentById(id)
+    }
+
+    suspend fun getAllIncompleteFragments(): List<Fragment> {
+        return fragmentDao.getAllFragmentsList()
+            .filter { it.pipelineStep != PipelineStep.COMPLETED }
+    }
+
+    suspend fun getFragmentsForDiary(diaryId: Long): List<Fragment> {
+        val crossRefs = crossRefDao.getCrossRefsForDiary(diaryId)
+        return crossRefs.mapNotNull { fragmentDao.getFragmentById(it.fragmentId) }
     }
 
     // Diary operations
@@ -60,6 +82,12 @@ class DiaryRepository @Inject constructor(
 
     suspend fun deleteDiary(diary: DiaryEntry) {
         diaryDao.delete(diary)
+    }
+
+    suspend fun deleteDiaryWithDependencies(diaryId: Long) {
+        crossRefDao.deleteCrossRefsForDiary(diaryId)
+        permaDao.deleteByDiaryId(diaryId)
+        diaryDao.deleteById(diaryId)
     }
 
     // PERMA operations

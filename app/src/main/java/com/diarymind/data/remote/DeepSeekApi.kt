@@ -14,10 +14,10 @@ interface DeepSeekApi {
 }
 
 data class ChatCompletionRequest(
-    val model: String = "deepseek-chat",
+    val model: String,
     val messages: List<Message>,
-    val temperature: Float = 0.7f,
-    val max_tokens: Int = 4096
+    val temperature: Float,
+    val max_tokens: Int
 )
 
 data class Message(

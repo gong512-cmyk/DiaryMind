@@ -5,9 +5,16 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.diarymind.data.remote.ChatCompletionRequest
 import com.diarymind.data.remote.DeepSeekApi
+import com.diarymind.data.remote.DynamicBaseUrlInterceptor
 import com.diarymind.data.remote.Message
 import com.diarymind.domain.model.Fragment
+import com.diarymind.domain.model.GenerationStyle
+import com.diarymind.util.LlmConfig
+import com.diarymind.util.getCustomPrompt
+import com.diarymind.util.getGenerationStyle
+import com.diarymind.util.getLlmConfig
 import com.google.gson.Gson
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,6 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class ExternalAPIProcessor @Inject constructor(
     private val deepSeekApi: DeepSeekApi,
+    private val baseUrlInterceptor: DynamicBaseUrlInterceptor,
     @ApplicationContext private val context: Context
 ) : DiaryAIProcessor {
 
@@ -41,8 +49,10 @@ class ExternalAPIProcessor @Inject constructor(
         )
     }
 
-    private fun getApiKey(): String? {
-        return encryptedPrefs.getString("deepseek_api_key", null)
+    internal fun applyConfig(): LlmConfig {
+        val config = try { getLlmConfig(context) } catch (_: Exception) { LlmConfig() }
+        baseUrlInterceptor.baseUrl = config.baseUrl.toHttpUrl()
+        return config
     }
 
     override suspend fun preprocess(fragments: List<Fragment>): List<ProcessedFragment> =
@@ -75,7 +85,9 @@ class ExternalAPIProcessor @Inject constructor(
 
     override suspend fun assessPERMA(text: String): PermaScoreResult =
         withContext(Dispatchers.IO) {
-            val apiKey = getApiKey() ?: throw IllegalStateException("API key not configured")
+            val config = applyConfig()
+            val apiKey = config.apiKey.takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("API key not configured")
 
             val prompt = """
                 请对以下日记内容进行 PERMA 积极心理学五维评估，并给出建设性反馈。
@@ -95,10 +107,13 @@ class ExternalAPIProcessor @Inject constructor(
             """.trimIndent()
 
             val request = ChatCompletionRequest(
+                model = config.model,
                 messages = listOf(
                     Message(role = "system", content = "你是一位专业的积极心理学教练，擅长从日常记录中发现亮点并提供温暖而诚实的反馈。"),
                     Message(role = "user", content = prompt)
-                )
+                ),
+                temperature = config.temperature,
+                max_tokens = config.maxTokens
             )
 
             val response = try {
@@ -110,7 +125,7 @@ class ExternalAPIProcessor @Inject constructor(
                 throw when (e.code()) {
                     401 -> IllegalStateException("API Key 无效或已过期，请检查设置")
                     429 -> IllegalStateException("请求过于频繁，请稍后再试")
-                    in 500..599 -> IllegalStateException("DeepSeek 服务器暂时不可用，请稍后再试")
+                    in 500..599 -> IllegalStateException("AI 服务器暂时不可用，请稍后再试")
                     else -> IllegalStateException("API 请求失败: ${e.code()}")
                 }
             } catch (e: SocketTimeoutException) {
@@ -127,31 +142,32 @@ class ExternalAPIProcessor @Inject constructor(
 
     override suspend fun generateDiary(fragments: List<ProcessedFragment>): String =
         withContext(Dispatchers.IO) {
-            val apiKey = getApiKey() ?: throw IllegalStateException("API key not configured")
+            val config = applyConfig()
+            val apiKey = config.apiKey.takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("API key not configured")
 
             val fragmentsText = fragments.joinToString("\n\n") {
                 "[${it.originalId}] ${it.content}"
             }
 
-            val prompt = """
-                请基于以下碎片记录，生成一篇连贯、温暖、真诚的日记。
-                要求：
-                1. 保留原始记录的情感色彩和关键信息
-                2. 去除重复和冗余，但不过度改写
-                3. 使用第一人称，语气自然亲切
-                4. 适当添加过渡语句使文章流畅
-                5. 总字数控制在 300-2000 字之间
-                6. 不要编造碎片中没有的信息
+            val style = try { getGenerationStyle(context) } catch (_: Exception) { GenerationStyle.NATURAL }
+            val customPrompt = try { getCustomPrompt(context) } catch (_: Exception) { null }
 
-                碎片记录：
-                $fragmentsText
-            """.trimIndent()
+            val systemPrompt = style.systemPrompt
+            val userPrompt = if (!customPrompt.isNullOrBlank()) {
+                customPrompt.replace("{fragments}", fragmentsText)
+            } else {
+                "${style.userPromptPrefix}\n\n碎片记录：\n$fragmentsText"
+            }
 
             val request = ChatCompletionRequest(
+                model = config.model,
                 messages = listOf(
-                    Message(role = "system", content = "你是一位善于倾听和表达的朋友，擅长将零散的想法整理成温暖真诚的文字。"),
-                    Message(role = "user", content = prompt)
-                )
+                    Message(role = "system", content = systemPrompt),
+                    Message(role = "user", content = userPrompt)
+                ),
+                temperature = config.temperature,
+                max_tokens = config.maxTokens
             )
 
             val response = try {
@@ -163,7 +179,7 @@ class ExternalAPIProcessor @Inject constructor(
                 throw when (e.code()) {
                     401 -> IllegalStateException("API Key 无效或已过期，请检查设置")
                     429 -> IllegalStateException("请求过于频繁，请稍后再试")
-                    in 500..599 -> IllegalStateException("DeepSeek 服务器暂时不可用，请稍后再试")
+                    in 500..599 -> IllegalStateException("AI 服务器暂时不可用，请稍后再试")
                     else -> IllegalStateException("API 请求失败: ${e.code()}")
                 }
             } catch (e: SocketTimeoutException) {

@@ -10,7 +10,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,10 +24,27 @@ class PipelineOrchestrator @Inject constructor(
     private val markdownExporter: MarkdownExporter
 ) {
 
-    suspend fun executePipeline(fragments: List<Fragment>): Flow<PipelineState> = flow {
+    suspend fun executePipeline(fragments: List<Fragment>, forceOverwrite: Boolean = false): Flow<PipelineState> = flow {
         emit(PipelineState.Running("开始处理..."))
 
         try {
+            val diaryDate = fragments.minOfOrNull { it.createdAt }
+                ?.let { timestamp ->
+                    Instant.ofEpochMilli(timestamp)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                }
+                ?: LocalDate.now()
+            val dateStr = diaryDate.format(DateTimeFormatter.ISO_DATE)
+
+            // Delete existing diary if overwriting
+            if (forceOverwrite) {
+                val existingDiary = repository.getDiaryByDate(dateStr)
+                existingDiary?.let {
+                    repository.deleteDiaryWithDependencies(it.id)
+                }
+            }
+
             // Step 1: Preprocess
             emit(PipelineState.Running("整理碎片..."))
             val processedFragments = aiProcessor.preprocess(fragments)
@@ -38,11 +57,10 @@ class PipelineOrchestrator @Inject constructor(
             val diaryContent = aiProcessor.generateDiary(processedFragments)
             val wordCount = diaryContent.length
 
-            val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
-            val title = extractTitle(diaryContent, today)
+            val title = extractTitle(diaryContent, dateStr)
 
             val diary = DiaryEntry(
-                date = today,
+                date = dateStr,
                 title = title,
                 content = diaryContent,
                 wordCount = wordCount,

@@ -8,25 +8,24 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DeepSeekRetrofitClient @Inject constructor() {
+class DeepSeekRetrofitClient @Inject constructor(
+    private val baseUrlInterceptor: DynamicBaseUrlInterceptor
+) {
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
     private val client = OkHttpClient.Builder()
+        .addInterceptor(baseUrlInterceptor)
         .addInterceptor(loggingInterceptor)
         .build()
 
     val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
+        .baseUrl("http://localhost/")
         .client(client)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
     val api: DeepSeekApi = retrofit.create(DeepSeekApi::class.java)
-
-    companion object {
-        const val BASE_URL = "https://api.deepseek.com/"
-    }
 }

@@ -11,7 +11,7 @@ import androidx.work.WorkerParameters
 import com.diarymind.R
 import com.diarymind.data.repository.DiaryRepository
 import com.diarymind.domain.usecase.PipelineOrchestrator
-import com.diarymind.util.getApiKey
+import com.diarymind.util.getLlmConfig
 import com.diarymind.util.hasPrivacyConsent
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -36,20 +36,19 @@ class DiaryGenerationWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val context = applicationContext
 
-        if (!hasPrivacyConsent(context) || getApiKey(context) == null) {
+        if (!hasPrivacyConsent(context) || getLlmConfig(context).apiKey.isBlank()) {
             return Result.failure()
         }
 
         val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
         val fragments = repository.getFragmentsByDate(today)
-            .filter { it.pipelineStep != com.diarymind.domain.model.PipelineStep.COMPLETED }
 
         if (fragments.isEmpty()) {
             return Result.success()
         }
 
         return try {
-            val state = pipelineOrchestrator.executePipeline(fragments).first { it !is PipelineOrchestrator.PipelineState.Running }
+            val state = pipelineOrchestrator.executePipeline(fragments, forceOverwrite = true).first { it !is PipelineOrchestrator.PipelineState.Running }
 
             when (state) {
                 is PipelineOrchestrator.PipelineState.Success -> {

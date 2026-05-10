@@ -17,11 +17,14 @@ interface FragmentDao {
     @Query("SELECT * FROM fragments WHERE pipelineStep = :step ORDER BY createdAt DESC")
     fun getFragmentsByStep(step: PipelineStep): Flow<List<Fragment>>
 
-    @Query("SELECT * FROM fragments WHERE date(createdAt/1000, 'unixepoch') = :date ORDER BY createdAt ASC")
-    suspend fun getFragmentsByDate(date: String): List<Fragment>
+    @Query("SELECT * FROM fragments WHERE createdAt >= :startOfDay AND createdAt < :endOfDay ORDER BY createdAt ASC")
+    suspend fun getFragmentsByDateRange(startOfDay: Long, endOfDay: Long): List<Fragment>
 
     @Query("SELECT * FROM fragments WHERE id = :id")
     suspend fun getFragmentById(id: Long): Fragment?
+
+    @Query("SELECT * FROM fragments ORDER BY createdAt DESC")
+    suspend fun getAllFragmentsList(): List<Fragment>
 
     @Insert
     suspend fun insert(fragment: Fragment): Long

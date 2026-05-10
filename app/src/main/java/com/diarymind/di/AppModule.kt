@@ -41,8 +41,14 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDeepSeekApi(): DeepSeekApi {
-        return DeepSeekRetrofitClient().api
+    fun provideDynamicBaseUrlInterceptor(): com.diarymind.data.remote.DynamicBaseUrlInterceptor {
+        return com.diarymind.data.remote.DynamicBaseUrlInterceptor()
+    }
+
+    @Provides
+    @Singleton
+    fun provideDeepSeekApi(interceptor: com.diarymind.data.remote.DynamicBaseUrlInterceptor): DeepSeekApi {
+        return com.diarymind.data.remote.DeepSeekRetrofitClient(interceptor).api
     }
 
     @Provides

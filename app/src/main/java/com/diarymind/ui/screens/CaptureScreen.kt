@@ -18,6 +18,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,14 +34,24 @@ import com.diarymind.ui.viewmodel.DiaryViewModel
 @Composable
 fun CaptureScreen(
     navController: NavController,
+    fragmentId: Long? = null,
     viewModel: DiaryViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val existingFragment = fragmentId?.let { id ->
+        uiState.fragments.find { it.id == id }
+    }
     var content by remember { mutableStateOf("") }
+    val isEditMode = fragmentId != null
+
+    LaunchedEffect(existingFragment) {
+        existingFragment?.let { content = it.content }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("记录碎片") },
+                title = { Text(if (isEditMode) "编辑碎片" else "记录碎片") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
@@ -69,7 +81,11 @@ fun CaptureScreen(
             Button(
                 onClick = {
                     if (content.isNotBlank()) {
-                        viewModel.addFragment(content.trim())
+                        if (isEditMode && fragmentId != null) {
+                            viewModel.editFragment(fragmentId, content.trim())
+                        } else {
+                            viewModel.addFragment(content.trim())
+                        }
                         content = ""
                         navController.popBackStack()
                     }
@@ -77,7 +93,7 @@ fun CaptureScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = content.isNotBlank()
             ) {
-                Text("保存碎片")
+                Text(if (isEditMode) "保存修改" else "保存碎片")
             }
         }
     }

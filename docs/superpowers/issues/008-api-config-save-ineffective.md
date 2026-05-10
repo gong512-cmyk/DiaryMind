@@ -51,6 +51,6 @@ fun getApiKey(context: Context): String? {
 
 ## 验收标准
 
-- [ ] 设置页保存 API Key 后，首页能立即识别并允许生成日记
-- [ ] 未配置 API Key 时的错误提示改为"请先在设置中配置 API Key"
-- [ ] 旧版存储的 API Key 仍能正常工作（向后兼容）
+- [x] 设置页保存 API Key 后，首页能立即识别并允许生成日记
+- [x] 未配置 API Key 时的错误提示改为"请先在设置中配置 API Key"
+- [x] 旧版存储的 API Key 仍能正常工作（向后兼容）

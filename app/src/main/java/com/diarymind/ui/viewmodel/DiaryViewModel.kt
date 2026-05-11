@@ -40,7 +40,7 @@ class DiaryViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            repository.allFragments.collect { fragments ->
+            repository.todayFragments.collect { fragments ->
                 _uiState.update { it.copy(fragments = fragments) }
             }
         }

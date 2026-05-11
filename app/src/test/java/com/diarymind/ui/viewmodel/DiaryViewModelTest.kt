@@ -49,7 +49,7 @@ class DiaryViewModelTest {
         markdownExporter = mockk(relaxed = true)
 
         every { repository.allDiaries } returns diariesFlow
-        every { repository.allFragments } returns fragmentsFlow
+        every { repository.todayFragments } returns fragmentsFlow
         every { repository.allPermaScores } returns permaScoresFlow
 
         viewModel = DiaryViewModel(repository, pipelineOrchestrator, markdownExporter)

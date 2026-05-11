@@ -26,6 +26,15 @@ class DiaryRepository @Inject constructor(
     // Fragment operations
     val allFragments: Flow<List<Fragment>> = fragmentDao.getAllFragments()
 
+    val todayFragments: Flow<List<Fragment>>
+        get() {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now()
+            val startOfDay = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val endOfDay = today.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            return fragmentDao.getTodayFragments(startOfDay, endOfDay)
+        }
+
     suspend fun addFragment(content: String): Long {
         return fragmentDao.insert(Fragment(content = content))
     }

@@ -20,6 +20,9 @@ interface FragmentDao {
     @Query("SELECT * FROM fragments WHERE createdAt >= :startOfDay AND createdAt < :endOfDay ORDER BY createdAt ASC")
     suspend fun getFragmentsByDateRange(startOfDay: Long, endOfDay: Long): List<Fragment>
 
+    @Query("SELECT * FROM fragments WHERE createdAt >= :startOfDay AND createdAt < :endOfDay ORDER BY createdAt DESC")
+    fun getTodayFragments(startOfDay: Long, endOfDay: Long): Flow<List<Fragment>>
+
     @Query("SELECT * FROM fragments WHERE id = :id")
     suspend fun getFragmentById(id: Long): Fragment?
 

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.diarymind.domain.model.DiaryEntry
@@ -13,9 +14,10 @@ import com.diarymind.domain.model.PermaScore
 
 @Database(
     entities = [Fragment::class, DiaryEntry::class, PermaScore::class, FragmentDiaryCrossRef::class],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
+@TypeConverters(Converters::class)
 abstract class DiaryDatabase : RoomDatabase() {
     abstract fun fragmentDao(): FragmentDao
     abstract fun diaryDao(): DiaryDao
@@ -55,6 +57,12 @@ abstract class DiaryDatabase : RoomDatabase() {
             }
         }
 
+        internal val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE fragments ADD COLUMN imagePaths TEXT DEFAULT NULL")
+            }
+        }
+
         fun getDatabase(context: Context): DiaryDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -62,7 +70,7 @@ abstract class DiaryDatabase : RoomDatabase() {
                     DiaryDatabase::class.java,
                     "diary_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance

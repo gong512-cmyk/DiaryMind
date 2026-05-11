@@ -11,7 +11,8 @@ data class Fragment(
     val type: FragmentType = FragmentType.TEXT,
     val sourceApp: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val pipelineStep: PipelineStep = PipelineStep.IDLE
+    val pipelineStep: PipelineStep = PipelineStep.IDLE,
+    val imagePaths: List<String>? = null
 )
 
 enum class FragmentType {

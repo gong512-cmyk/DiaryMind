@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -56,6 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.diarymind.domain.model.DiaryEntry
 import com.diarymind.domain.model.displayTitle
+import com.diarymind.domain.model.toStars
 import com.diarymind.ui.viewmodel.DiaryViewModel
 import com.diarymind.util.getLlmConfig
 import com.diarymind.util.hasPrivacyConsent
@@ -270,11 +273,25 @@ private fun TodayDiaryCard(diary: DiaryEntry, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "${diary.wordCount} 字",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${diary.wordCount} 字",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                )
+                val stars = diary.rating.toStars()
+                if (stars.isNotEmpty()) {
+                    Text(
+                        text = stars,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFFB800)
+                    )
+                }
+            }
         }
     }
 }
@@ -285,6 +302,14 @@ private fun TodayFragmentsSection(
     onGenerateClick: () -> Unit,
     onFragmentClick: (Long) -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    val showExpandButton = uiState.fragments.size > 3
+    val displayedFragments = if (expanded || !showExpandButton) {
+        uiState.fragments
+    } else {
+        uiState.fragments.take(3)
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -332,7 +357,7 @@ private fun TodayFragmentsSection(
 
             if (uiState.fragments.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
-                uiState.fragments.take(3).forEach { fragment ->
+                displayedFragments.forEach { fragment ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -352,13 +377,20 @@ private fun TodayFragmentsSection(
                         )
                     }
                 }
-                if (uiState.fragments.size > 3) {
-                    Text(
-                        text = "还有 ${uiState.fragments.size - 3} 条...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                if (showExpandButton) {
+                    TextButton(
+                        onClick = { expanded = !expanded }
+                    ) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (expanded) "收起" else "展开",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            if (expanded) "收起" else "展开全部 ${uiState.fragments.size} 条"
+                        )
+                    }
                 }
             }
         }
@@ -421,11 +453,24 @@ private fun TimelineDiaryItem(
                 .padding(start = 8.dp, bottom = if (isLast) 0.dp else 16.dp)
                 .weight(1f)
         ) {
-            Text(
-                text = diary.date,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = diary.date,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val stars = diary.rating.toStars()
+                if (stars.isNotEmpty()) {
+                    Text(
+                        text = stars,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFFB800)
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = diary.displayTitle(),

@@ -3,6 +3,7 @@ package com.diarymind.domain.usecase
 import android.content.Context
 import com.diarymind.domain.model.DiaryEntry
 import com.diarymind.domain.model.PermaScore
+import com.diarymind.domain.model.toStars
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -43,16 +44,21 @@ class MarkdownExporter @Inject constructor(
             ((it.positiveEmotion + it.engagement + it.relationships + it.meaning + it.accomplishment) / 5.0)
         }
 
+        val ratingStars = diary.rating.toStars()
+
         val frontMatter = buildString {
             appendLine("---")
             appendLine("date: ${diary.date}")
             appendLine("tags: [diary, perma]")
             avgScore?.let { appendLine(String.format("mood_score: %.1f", it)) }
+            diary.rating?.let { appendLine("rating: $it") }
             appendLine("---")
             appendLine()
         }
 
-        val header = "# ${diary.title}\n\n"
+        val header = "# ${diary.title}" +
+                if (ratingStars.isNotEmpty()) "  $ratingStars" else "" +
+                "\n\n"
 
         val body = "## 日记正文\n\n${diary.content}\n\n"
 

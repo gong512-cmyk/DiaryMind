@@ -14,6 +14,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,17 +36,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.diarymind.domain.model.GenerationStyle
+import com.diarymind.domain.model.EditLevel
+import com.diarymind.domain.model.ReviewDepth
 import com.diarymind.util.LlmConfig
 import com.diarymind.util.clearAllApiKeys
 import com.diarymind.util.clearCustomPrompt
 import com.diarymind.util.getCustomPrompt
-import com.diarymind.util.getGenerationStyle
+import com.diarymind.util.getEditLevel
+import com.diarymind.util.getReviewDepth
 import com.diarymind.util.getLlmConfig
 import com.diarymind.util.saveCustomPrompt
-import com.diarymind.util.saveGenerationStyle
+import com.diarymind.util.saveEditLevel
+import com.diarymind.util.saveReviewDepth
 import com.diarymind.util.saveLlmConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +93,7 @@ fun SettingsScreen(navController: NavController) {
 
             val presets = remember {
                 mapOf(
-                    "deepseek" to Pair("https://api.deepseek.com/", "deepseek-chat"),
+                    "deepseek" to Pair("https://api.deepseek.com/", "deepseek-v4-flash"),
                     "openai" to Pair("https://api.openai.com/v1/", "gpt-4o"),
                     "bailian" to Pair("https://dashscope.aliyuncs.com/compatible-mode/v1/", "qwen-max"),
                     "custom" to Pair("", "")
@@ -104,6 +111,7 @@ fun SettingsScreen(navController: NavController) {
             var config by remember {
                 mutableStateOf(try { getLlmConfig(context) } catch (_: Exception) { LlmConfig() })
             }
+            var passwordVisible by remember { mutableStateOf(false) }
 
             // Supplier selection
             Column(modifier = Modifier.selectableGroup()) {
@@ -163,6 +171,15 @@ fun SettingsScreen(navController: NavController) {
                 value = config.apiKey,
                 onValueChange = { config = config.copy(apiKey = it) },
                 label = { Text("API Key") },
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (passwordVisible) "隐藏 API Key" else "显示 API Key"
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -172,7 +189,7 @@ fun SettingsScreen(navController: NavController) {
                 OutlinedTextField(
                     value = config.temperature.toString(),
                     onValueChange = {
-                        config = config.copy(temperature = it.toFloatOrNull() ?: 0.7f)
+                        config = config.copy(temperature = it.toFloatOrNull() ?: 1.0f)
                     },
                     label = { Text("Temperature") },
                     modifier = Modifier.weight(1f)
@@ -222,42 +239,40 @@ fun SettingsScreen(navController: NavController) {
             Divider()
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Generation Style
+            // Edit Level
             Text(
-                text = "生成风格",
+                text = "编辑强度",
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "选择日记生成时的润色程度",
+                text = "控制 AI 对原始文字改写幅度",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            var selectedStyle by remember { mutableStateOf(getGenerationStyle(context)) }
-            var customPrompt by remember { mutableStateOf(getCustomPrompt(context) ?: "") }
-            var isAdvancedMode by remember { mutableStateOf(getCustomPrompt(context) != null) }
+            var editLevel by remember { mutableStateOf(getEditLevel(context)) }
 
             Column(modifier = Modifier.selectableGroup()) {
-                GenerationStyle.entries.forEach { style ->
+                EditLevel.entries.forEach { level ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(40.dp)
                             .selectable(
-                                selected = (selectedStyle == style),
-                                onClick = { selectedStyle = style },
+                                selected = (editLevel == level),
+                                onClick = { editLevel = level },
                                 role = Role.RadioButton
                             ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = (selectedStyle == style),
+                            selected = (editLevel == level),
                             onClick = null
                         )
                         Text(
-                            text = style.displayName,
+                            text = level.displayName,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(start = 8.dp)
                         )
@@ -265,16 +280,62 @@ fun SettingsScreen(navController: NavController) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Review Depth
+            Text(
+                text = "点评深度",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "控制 PERMA 评估反馈的详细程度",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            var reviewDepth by remember { mutableStateOf(getReviewDepth(context)) }
+
+            Column(modifier = Modifier.selectableGroup()) {
+                ReviewDepth.entries.forEach { depth ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .selectable(
+                                selected = (reviewDepth == depth),
+                                onClick = { reviewDepth = depth },
+                                role = Role.RadioButton
+                            ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (reviewDepth == depth),
+                            onClick = null
+                        )
+                        Text(
+                            text = depth.displayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Advanced: custom prompt
+            var customPrompt by remember { mutableStateOf(getCustomPrompt(context) ?: "") }
+            var isAdvancedMode by remember { mutableStateOf(getCustomPrompt(context) != null) }
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
                     selected = isAdvancedMode,
                     onClick = { isAdvancedMode = !isAdvancedMode }
                 )
                 Text(
-                    text = "高级：自定义提示词",
+                    text = "高级：自定义提示词（覆盖编辑强度）",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(start = 4.dp)
                 )
@@ -300,7 +361,8 @@ fun SettingsScreen(navController: NavController) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = {
-                        saveGenerationStyle(context, selectedStyle)
+                        saveEditLevel(context, editLevel)
+                        saveReviewDepth(context, reviewDepth)
                         if (isAdvancedMode && customPrompt.isNotBlank()) {
                             saveCustomPrompt(context, customPrompt)
                         } else {
@@ -310,17 +372,6 @@ fun SettingsScreen(navController: NavController) {
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("保存风格设置")
-                }
-                if (isAdvancedMode) {
-                    Spacer(modifier = Modifier.height(8.dp).weight(0.1f))
-                    Button(
-                        onClick = {
-                            customPrompt = selectedStyle.userPromptPrefix + "\n\n碎片记录：\n{fragments}"
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("恢复默认")
-                    }
                 }
             }
 

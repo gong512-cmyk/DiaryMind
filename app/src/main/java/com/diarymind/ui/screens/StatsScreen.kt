@@ -324,16 +324,20 @@ private fun MoodLineChart(data: List<DayPerma>) {
                 }
             }
         }
-        // Date labels
+        // Date labels — show every other day to avoid crowding
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp),
+                .padding(start = 32.dp, end = 32.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            data.forEach { dayPerma ->
+            data.forEachIndexed { index, dayPerma ->
                 Text(
-                    text = dayPerma.date.substring(5),
+                    text = if (index % 2 == 0) {
+                        dayPerma.date.substring(5)
+                    } else {
+                        ""
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

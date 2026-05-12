@@ -14,6 +14,7 @@ data class DiaryEntry(
     val isPaginated: Boolean = false,
     val totalPages: Int = 1,
     val localPath: String? = null,
+    val rating: Int? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 
@@ -22,4 +23,12 @@ fun DiaryEntry.displayTitle(): String {
         .replace(Regex("^\\d{4}-\\d{2}-\\d{2}\\s*"), "")
         .replace(Regex("^#{1,6}\\s*"), "")
         .trim()
+}
+
+fun Int?.toStars(): String {
+    if (this == null || this <= 0) return ""
+    return buildString {
+        repeat(this@toStars) { append("★") }
+        repeat(5 - this@toStars) { append("☆") }
+    }
 }

@@ -3,7 +3,9 @@ package com.diarymind.util
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.diarymind.domain.model.GenerationStyle
+import com.diarymind.domain.model.EditLevel
+import com.diarymind.domain.model.ReviewDepth
+import com.diarymind.domain.model.CUSTOM_PROMPT_KEY
 
 private const val PREFS_NAME = "diarymind_secure_prefs"
 private const val KEY_API_KEY = "deepseek_api_key"
@@ -19,9 +21,9 @@ private const val KEY_LLM_MAX_TOKENS = "llm_max_tokens"
 data class LlmConfig(
     val supplier: String = "deepseek",
     val baseUrl: String = "https://api.deepseek.com/",
-    val model: String = "deepseek-chat",
+    val model: String = "deepseek-v4-flash",
     val apiKey: String = "",
-    val temperature: Float = 0.7f,
+    val temperature: Float = 1.0f,
     val maxTokens: Int = 4096
 )
 
@@ -57,25 +59,34 @@ fun setPrivacyConsent(context: Context, consented: Boolean) {
     getEncryptedPrefs(context).edit().putBoolean(KEY_PRIVACY_CONSENT, consented).apply()
 }
 
-fun getGenerationStyle(context: Context): GenerationStyle {
-    val key = getEncryptedPrefs(context).getString(GenerationStyle.PREFS_KEY, null)
-    return key?.let { GenerationStyle.fromKey(it) } ?: GenerationStyle.NATURAL
+fun getEditLevel(context: Context): EditLevel {
+    val key = getEncryptedPrefs(context).getString(EditLevel.PREFS_KEY, null)
+    return key?.let { EditLevel.fromKey(it) } ?: EditLevel.TYPO_ONLY
 }
 
-fun saveGenerationStyle(context: Context, style: GenerationStyle) {
-    getEncryptedPrefs(context).edit().putString(GenerationStyle.PREFS_KEY, style.name).apply()
+fun saveEditLevel(context: Context, level: EditLevel) {
+    getEncryptedPrefs(context).edit().putString(EditLevel.PREFS_KEY, level.name).apply()
+}
+
+fun getReviewDepth(context: Context): ReviewDepth {
+    val key = getEncryptedPrefs(context).getString(ReviewDepth.PREFS_KEY, null)
+    return key?.let { ReviewDepth.fromKey(it) } ?: ReviewDepth.STANDARD
+}
+
+fun saveReviewDepth(context: Context, depth: ReviewDepth) {
+    getEncryptedPrefs(context).edit().putString(ReviewDepth.PREFS_KEY, depth.name).apply()
 }
 
 fun getCustomPrompt(context: Context): String? {
-    return getEncryptedPrefs(context).getString(GenerationStyle.CUSTOM_PROMPT_KEY, null)
+    return getEncryptedPrefs(context).getString(CUSTOM_PROMPT_KEY, null)
 }
 
 fun saveCustomPrompt(context: Context, prompt: String) {
-    getEncryptedPrefs(context).edit().putString(GenerationStyle.CUSTOM_PROMPT_KEY, prompt).apply()
+    getEncryptedPrefs(context).edit().putString(CUSTOM_PROMPT_KEY, prompt).apply()
 }
 
 fun clearCustomPrompt(context: Context) {
-    getEncryptedPrefs(context).edit().remove(GenerationStyle.CUSTOM_PROMPT_KEY).apply()
+    getEncryptedPrefs(context).edit().remove(CUSTOM_PROMPT_KEY).apply()
 }
 
 fun getLlmConfig(context: Context): LlmConfig {
@@ -83,10 +94,10 @@ fun getLlmConfig(context: Context): LlmConfig {
     return LlmConfig(
         supplier = prefs.getString(KEY_LLM_SUPPLIER, "deepseek") ?: "deepseek",
         baseUrl = prefs.getString(KEY_LLM_BASE_URL, "https://api.deepseek.com/") ?: "https://api.deepseek.com/",
-        model = prefs.getString(KEY_LLM_MODEL, "deepseek-chat") ?: "deepseek-chat",
+        model = prefs.getString(KEY_LLM_MODEL, "deepseek-v4-flash") ?: "deepseek-v4-flash",
         apiKey = prefs.getString(KEY_LLM_API_KEY, null)
             ?: prefs.getString(KEY_API_KEY, "") ?: "",
-        temperature = prefs.getFloat(KEY_LLM_TEMPERATURE, 0.7f),
+        temperature = prefs.getFloat(KEY_LLM_TEMPERATURE, 1.0f),
         maxTokens = prefs.getInt(KEY_LLM_MAX_TOKENS, 4096)
     )
 }

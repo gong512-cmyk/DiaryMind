@@ -52,6 +52,7 @@ class PipelineOrchestratorTest {
         )
 
         coEvery { aiProcessor.preprocess(fragments) } returns processed
+        coEvery { aiProcessor.assessQuality(processed) } returns 3
         coEvery { aiProcessor.generateDiary(processed) } returns diaryContent
         coEvery { repository.addDiary(any()) } returns 100L
         coEvery { aiProcessor.assessPERMA(diaryContent) } returns permaResult
@@ -101,7 +102,7 @@ class PipelineOrchestratorTest {
         assertTrue(states.last() is PipelineOrchestrator.PipelineState.Error)
         val error = states.last() as PipelineOrchestrator.PipelineState.Error
         assertEquals(errorMessage, error.message)
-        coVerify(exactly = 0) { repository.getDiaryByDate(any()) }
+        coVerify(exactly = 1) { repository.getDiaryByDate(any()) }
         coVerify(exactly = 0) { repository.deleteDiaryWithDependencies(any()) }
         coVerify(exactly = 0) { repository.addDiary(any()) }
     }
@@ -172,40 +173,14 @@ class PipelineOrchestratorTest {
     }
 
     @Test
-    fun `extractTitle truncates long first line`() {
-        val content = "这是一段非常长的开头文字，超过了二十个字符的限制"
-        val date = "2026-05-07"
-
-        val title = orchestrator.extractTitle(content, date)
-
-        assertTrue(title.startsWith(date))
-        assertTrue(title.endsWith("..."))
-        assertTrue(title.length <= 35)
+    fun `extractTitle returns fixed format yyyyMMdd 今天日记`() {
+        val title = orchestrator.extractTitle("ignored content", "2026-05-07")
+        assertEquals("20260507 今天日记", title)
     }
 
     @Test
-    fun `extractTitle uses default when content is empty`() {
-        val title = orchestrator.extractTitle("", "2026-05-07")
-        assertEquals("2026-05-07 今日记录", title)
-    }
-
-    @Test
-    fun `extractTitle strips markdown heading markers`() {
-        val content = "# 日记：2025年5月6日\n今天发生了一些事情。"
-        val date = "2026-05-07"
-
-        val title = orchestrator.extractTitle(content, date)
-
-        assertEquals("2026-05-07 日记：2025年5月6日", title)
-    }
-
-    @Test
-    fun `extractTitle strips multiple heading levels`() {
-        val content = "### 小结\n内容在这里"
-        val date = "2026-05-07"
-
-        val title = orchestrator.extractTitle(content, date)
-
-        assertEquals("2026-05-07 小结", title)
+    fun `extractTitle handles malformed date gracefully`() {
+        val title = orchestrator.extractTitle("ignored", "invalid")
+        assertEquals("invalid 今天日记", title)
     }
 }

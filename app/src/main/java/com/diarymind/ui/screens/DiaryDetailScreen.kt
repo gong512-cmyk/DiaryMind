@@ -52,6 +52,7 @@ import com.diarymind.domain.model.DiaryEntry
 import com.diarymind.domain.model.Fragment
 import com.diarymind.domain.model.PermaScore
 import com.diarymind.domain.model.displayTitle
+import com.diarymind.domain.model.toStars
 import com.diarymind.ui.components.EmptyState
 import com.diarymind.ui.viewmodel.DiaryViewModel
 
@@ -160,6 +161,16 @@ fun DiaryDetailScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            val stars = diary.rating.toStars()
+            if (stars.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stars,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color(0xFFFFB800)
+                )
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 

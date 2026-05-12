@@ -8,10 +8,12 @@ import com.diarymind.data.remote.DeepSeekApi
 import com.diarymind.data.remote.DynamicBaseUrlInterceptor
 import com.diarymind.data.remote.Message
 import com.diarymind.domain.model.Fragment
-import com.diarymind.domain.model.GenerationStyle
+import com.diarymind.domain.model.EditLevel
+import com.diarymind.domain.model.ReviewDepth
 import com.diarymind.util.LlmConfig
 import com.diarymind.util.getCustomPrompt
-import com.diarymind.util.getGenerationStyle
+import com.diarymind.util.getEditLevel
+import com.diarymind.util.getReviewDepth
 import com.diarymind.util.getLlmConfig
 import com.google.gson.Gson
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -89,8 +91,10 @@ class ExternalAPIProcessor @Inject constructor(
             val apiKey = config.apiKey.takeIf { it.isNotBlank() }
                 ?: throw IllegalStateException("API key not configured")
 
+            val depth = try { getReviewDepth(context) } catch (_: Exception) { ReviewDepth.STANDARD }
+
             val prompt = """
-                请对以下日记内容进行 PERMA 积极心理学五维评估，并给出建设性反馈。
+                请对以下日记内容进行 PERMA 积极心理学五维评估，并给出反馈。
                 请严格按照以下 JSON 格式返回，不要包含任何其他内容：
                 {
                   "positiveEmotion": 0-10,
@@ -98,8 +102,8 @@ class ExternalAPIProcessor @Inject constructor(
                   "relationships": 0-10,
                   "meaning": 0-10,
                   "accomplishment": 0-10,
-                  "aiReview": "200字以内的综合评语，用温暖鼓励的语气",
-                  "suggestions": "200字以内的明日建议"
+                  "aiReview": "${depth.reviewPrompt}",
+                  "suggestions": "${depth.maxReviewChars}字以内的明日建议"
                 }
 
                 日记内容：
@@ -109,7 +113,7 @@ class ExternalAPIProcessor @Inject constructor(
             val request = ChatCompletionRequest(
                 model = config.model,
                 messages = listOf(
-                    Message(role = "system", content = "你是一位专业的积极心理学教练，擅长从日常记录中发现亮点并提供温暖而诚实的反馈。"),
+                    Message(role = "system", content = depth.systemPrompt),
                     Message(role = "user", content = prompt)
                 ),
                 temperature = config.temperature,
@@ -150,14 +154,14 @@ class ExternalAPIProcessor @Inject constructor(
                 "[${it.originalId}] ${it.content}"
             }
 
-            val style = try { getGenerationStyle(context) } catch (_: Exception) { GenerationStyle.NATURAL }
+            val editLevel = try { getEditLevel(context) } catch (_: Exception) { EditLevel.TYPO_ONLY }
             val customPrompt = try { getCustomPrompt(context) } catch (_: Exception) { null }
 
-            val systemPrompt = style.systemPrompt
+            val systemPrompt = editLevel.systemPrompt
             val userPrompt = if (!customPrompt.isNullOrBlank()) {
                 customPrompt.replace("{fragments}", fragmentsText)
             } else {
-                "${style.userPromptPrefix}\n\n碎片记录：\n$fragmentsText"
+                "${editLevel.userPromptPrefix}\n\n碎片记录：\n$fragmentsText"
             }
 
             val request = ChatCompletionRequest(
@@ -191,6 +195,84 @@ class ExternalAPIProcessor @Inject constructor(
             response.choices.firstOrNull()?.message?.content
                 ?: throw IllegalStateException("API 返回为空")
         }
+
+    override suspend fun assessQuality(fragments: List<ProcessedFragment>): Int =
+        withContext(Dispatchers.IO) {
+            val config = applyConfig()
+            val apiKey = config.apiKey.takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("API key not configured")
+
+            val fragmentsText = fragments.joinToString("\n") { "- ${it.content}" }
+
+            // Check if there's a previous rating to enforce "only up" rule
+            // Note: the caller (PipelineOrchestrator) handles max(old, new)
+            val prompt = """
+                请对以下当日碎片记录进行质量评级（1-5星），仅返回JSON：
+                {
+                  "rating": 1-5,
+                  "reason": "一句话说明为什么给这个等级"
+                }
+
+                评级标准：
+                1星 — 全是日常记录，无任何思考或感悟
+                2星 — 有有意义的事，但缺乏深入思考
+                3星 — 有明显的感悟、反思或想法
+                4星 — 出现重要洞见、关键思路、有价值的观察
+                5星 — 改变认知的反思 + 有可操作的实践经验总结
+
+                当日碎片：
+                $fragmentsText
+            """.trimIndent()
+
+            val request = ChatCompletionRequest(
+                model = config.model,
+                messages = listOf(
+                    Message(role = "system", content = "你是一位专业的内容质量评估助手，只返回JSON格式的评级结果。"),
+                    Message(role = "user", content = prompt)
+                ),
+                temperature = 0.3f,
+                max_tokens = 256
+            )
+
+            val response = try {
+                deepSeekApi.chatCompletion(
+                    authorization = "Bearer $apiKey",
+                    request = request
+                )
+            } catch (e: HttpException) {
+                throw when (e.code()) {
+                    401 -> IllegalStateException("API Key 无效或已过期")
+                    429 -> IllegalStateException("请求过于频繁，请稍后再试")
+                    in 500..599 -> IllegalStateException("AI 服务器暂时不可用")
+                    else -> IllegalStateException("API 请求失败: ${e.code()}")
+                }
+            } catch (e: SocketTimeoutException) {
+                throw IllegalStateException("连接超时")
+            } catch (e: IOException) {
+                throw IllegalStateException("网络连接失败")
+            }
+
+            val content = response.choices.firstOrNull()?.message?.content
+                ?: throw IllegalStateException("API 返回为空")
+
+            parseQualityResponse(content)
+        }
+
+    private fun parseQualityResponse(content: String): Int {
+        val json = content.trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+
+        return try {
+            val obj = gson.fromJson(json, Map::class.java)
+            val rating = obj["rating"]?.toString()?.toFloatOrNull()?.toInt() ?: 0
+            rating.coerceIn(1, 5)
+        } catch (_: Exception) {
+            0
+        }
+    }
 
     override suspend fun generateReview(permaScore: PermaScoreResult): ReviewResult {
         return ReviewResult(

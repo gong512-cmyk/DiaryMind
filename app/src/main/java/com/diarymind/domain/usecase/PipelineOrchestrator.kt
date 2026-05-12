@@ -42,7 +42,15 @@ class PipelineOrchestrator @Inject constructor(
                 repository.updateFragmentStep(original.id, PipelineStep.PREPROCESSED)
             }
 
-            // Step 2: Generate diary
+            // Step 2: Assess quality
+            emit(PipelineState.Running("评估素材质量..."))
+            val newRating = aiProcessor.assessQuality(processedFragments)
+            val oldRating = if (forceOverwrite) {
+                repository.getDiaryByDate(dateStr)?.rating
+            } else null
+            val finalRating = maxOf(oldRating ?: 0, newRating).takeIf { it > 0 }
+
+            // Step 3: Generate diary
             emit(PipelineState.Running("生成日记..."))
             val diaryContent = aiProcessor.generateDiary(processedFragments)
             val wordCount = diaryContent.length
@@ -55,10 +63,11 @@ class PipelineOrchestrator @Inject constructor(
                 content = diaryContent,
                 wordCount = wordCount,
                 isPaginated = wordCount > 5000,
-                totalPages = if (wordCount > 5000) (wordCount / 5000) + 1 else 1
+                totalPages = if (wordCount > 5000) (wordCount / 5000) + 1 else 1,
+                rating = finalRating
             )
 
-            // Step 3: Assess PERMA
+            // Step 4: Assess PERMA
             emit(PipelineState.Running("分析心理状态..."))
             val permaResult = aiProcessor.assessPERMA(diaryContent)
 
@@ -115,14 +124,13 @@ class PipelineOrchestrator @Inject constructor(
     }
 
     internal fun extractTitle(content: String, date: String): String {
-        val firstLine = content.lineSequence().firstOrNull()?.trim() ?: ""
-        val cleanLine = firstLine.replace(Regex("^#{1,6}\\s*"), "").trim()
-        val summary = if (cleanLine.length > 20) {
-            cleanLine.take(20) + "..."
-        } else {
-            cleanLine.ifEmpty { "今日记录" }
+        val compactDate = try {
+            LocalDate.parse(date, DateTimeFormatter.ISO_DATE)
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+        } catch (_: Exception) {
+            date.replace("-", "")
         }
-        return "$date $summary"
+        return "$compactDate 今天日记"
     }
 
     sealed class PipelineState {

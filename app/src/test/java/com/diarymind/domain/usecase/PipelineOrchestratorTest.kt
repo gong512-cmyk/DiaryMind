@@ -52,7 +52,7 @@ class PipelineOrchestratorTest {
         )
 
         coEvery { aiProcessor.preprocess(fragments) } returns processed
-        coEvery { aiProcessor.assessQuality(processed) } returns 3
+        coEvery { aiProcessor.assessQuality(processed) } returns QualityResult(3, "有内容有思考")
         coEvery { aiProcessor.generateDiary(processed) } returns diaryContent
         coEvery { repository.addDiary(any()) } returns 100L
         coEvery { aiProcessor.assessPERMA(diaryContent) } returns permaResult

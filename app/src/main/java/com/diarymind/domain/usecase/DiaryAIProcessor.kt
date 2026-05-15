@@ -9,8 +9,13 @@ interface DiaryAIProcessor {
     suspend fun assessPERMA(text: String): PermaScoreResult
     suspend fun generateDiary(fragments: List<ProcessedFragment>): String
     suspend fun generateReview(permaScore: PermaScoreResult): ReviewResult
-    suspend fun assessQuality(fragments: List<ProcessedFragment>): Int
+    suspend fun assessQuality(fragments: List<ProcessedFragment>): QualityResult
 }
+
+data class QualityResult(
+    val rating: Int,
+    val reason: String
+)
 
 data class ProcessedFragment(
     val originalId: Long,

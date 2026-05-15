@@ -52,6 +52,7 @@ class MarkdownExporter @Inject constructor(
             appendLine("tags: [diary, perma]")
             avgScore?.let { appendLine(String.format("mood_score: %.1f", it)) }
             diary.rating?.let { appendLine("rating: $it") }
+            diary.ratingReason?.let { appendLine("rating_reason: \"${it}\"") }
             appendLine("---")
             appendLine()
         }

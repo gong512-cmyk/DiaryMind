@@ -44,11 +44,13 @@ class PipelineOrchestrator @Inject constructor(
 
             // Step 2: Assess quality
             emit(PipelineState.Running("评估素材质量..."))
-            val newRating = aiProcessor.assessQuality(processedFragments)
-            val oldRating = if (forceOverwrite) {
-                repository.getDiaryByDate(dateStr)?.rating
-            } else null
-            val finalRating = maxOf(oldRating ?: 0, newRating).takeIf { it > 0 }
+            val newQuality = aiProcessor.assessQuality(processedFragments)
+            val oldDiary = if (forceOverwrite) repository.getDiaryByDate(dateStr) else null
+            val (finalRating, finalReason) = if (oldDiary != null && (oldDiary.rating ?: 0) >= newQuality.rating) {
+                Pair(oldDiary.rating, oldDiary.ratingReason)
+            } else {
+                Pair(newQuality.rating.takeIf { it > 0 }, newQuality.reason)
+            }
 
             // Step 3: Generate diary
             emit(PipelineState.Running("生成日记..."))
@@ -64,7 +66,8 @@ class PipelineOrchestrator @Inject constructor(
                 wordCount = wordCount,
                 isPaginated = wordCount > 5000,
                 totalPages = if (wordCount > 5000) (wordCount / 5000) + 1 else 1,
-                rating = finalRating
+                rating = finalRating,
+                ratingReason = finalReason
             )
 
             // Step 4: Assess PERMA

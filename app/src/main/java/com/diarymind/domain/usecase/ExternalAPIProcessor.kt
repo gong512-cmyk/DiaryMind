@@ -196,7 +196,7 @@ class ExternalAPIProcessor @Inject constructor(
                 ?: throw IllegalStateException("API 返回为空")
         }
 
-    override suspend fun assessQuality(fragments: List<ProcessedFragment>): Int =
+    override suspend fun assessQuality(fragments: List<ProcessedFragment>): QualityResult =
         withContext(Dispatchers.IO) {
             val config = applyConfig()
             val apiKey = config.apiKey.takeIf { it.isNotBlank() }
@@ -258,7 +258,7 @@ class ExternalAPIProcessor @Inject constructor(
             parseQualityResponse(content)
         }
 
-    private fun parseQualityResponse(content: String): Int {
+    private fun parseQualityResponse(content: String): QualityResult {
         val json = content.trim()
             .removePrefix("```json")
             .removePrefix("```")
@@ -268,9 +268,13 @@ class ExternalAPIProcessor @Inject constructor(
         return try {
             val obj = gson.fromJson(json, Map::class.java)
             val rating = obj["rating"]?.toString()?.toFloatOrNull()?.toInt() ?: 0
-            rating.coerceIn(1, 5)
+            val reason = obj["reason"]?.toString() ?: ""
+            QualityResult(
+                rating = rating.coerceIn(1, 5),
+                reason = reason
+            )
         } catch (_: Exception) {
-            0
+            QualityResult(rating = 0, reason = "")
         }
     }
 

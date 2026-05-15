@@ -170,6 +170,14 @@ fun DiaryDetailScreen(
                     style = MaterialTheme.typography.titleLarge,
                     color = Color(0xFFFFB800)
                 )
+                diary.ratingReason?.let { reason ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = reason,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))

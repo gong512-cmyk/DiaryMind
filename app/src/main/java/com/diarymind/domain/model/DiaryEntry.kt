@@ -15,6 +15,7 @@ data class DiaryEntry(
     val totalPages: Int = 1,
     val localPath: String? = null,
     val rating: Int? = null,
+    val ratingReason: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 
